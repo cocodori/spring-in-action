@@ -11,6 +11,12 @@
         <img th:src="@{/images/taco.png}">
         <a th:href="@{/design}" id="another">Design another taco</a><br>
 
+        <ul>
+            <li th:each="taco : ${order.tacos}">
+                <span th:text="${taco.name}">Taco name</span>
+            </li>
+        </ul>
+
         <div th:if="${#fields.hasErrors()}">
             <span class="validationError">
                 Please correct the problems blow and resubmit.
