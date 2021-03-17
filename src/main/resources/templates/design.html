@@ -7,9 +7,10 @@
 </head>
 <body>
     <h1>Design your Taco!</h1>
+    <h2>Feelin' hungry, <span th:text="${user.getFullname()}">Name</span>?</h2>
     <img th:src="@{/images/taco.png}">
 
-    <form method="POST" th:object="${taco}">
+    <form method="POST" th:object="${taco}" th:action="@{/design}">
         <span class="validationError"
               th:if="${#fields.hasErrors('ingredients')}"
               th:errors="*{ingredients}">Ingredients Error</span>
@@ -66,5 +67,10 @@
             <button>Submit your taco</button>
         </div>
     </form>
+
+    <form method="POST" th:action="@{/logout}" id="logoutForm">
+        <input type="submit" value="logout">
+    </form>
+
 </body>
 </html>
