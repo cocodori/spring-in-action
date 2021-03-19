@@ -1,89 +1,54 @@
 package tacos.web;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.Errors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.hateoas.server.EntityLinks;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tacos.data.IngredientRepository;
 import tacos.data.TacoRepository;
-import tacos.data.UserRepository;
-import tacos.domain.Ingredient;
-import tacos.domain.Order;
 import tacos.domain.Taco;
-import tacos.domain.User;
 
-import javax.validation.Valid;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
-@Slf4j
-@Controller
-@RequestMapping("/design")
-@SessionAttributes("order")
+@RestController
+@RequestMapping(path = "/design", produces = "application/json")
+@CrossOrigin(origins = "*") //다른 도메인 요청 허용
 public class DesignTacoController {
-    private final IngredientRepository ingredientRepository;
     private TacoRepository tacoRepository;
-    private UserRepository userRepository;
 
     @Autowired
-    public DesignTacoController(IngredientRepository ingredientRepository,
-                                TacoRepository tacoRepository,
-                                UserRepository userRepository) {
-        this.ingredientRepository = ingredientRepository;
+    EntityLinks entityLinkes;
+
+    public DesignTacoController(TacoRepository tacoRepository) {
         this.tacoRepository = tacoRepository;
-        this.userRepository = userRepository;
     }
 
-    @ModelAttribute(name = "order")
-    public Order order() {
-        return new Order();
+    //타코 전체 조회
+    @GetMapping("/recent")
+    public Iterable<Taco> recentTacos() {
+        PageRequest page = PageRequest.of(0, 12, Sort.by("createdAt").descending());
+
+        return tacoRepository.findAll(page).getContent();
     }
 
-    @ModelAttribute(name = "taco")
-    public Taco taco() {
-        return new Taco();
+    //하나의 타코 조회
+    @GetMapping("/{id}")
+    public ResponseEntity<Taco> tacoById(@PathVariable("id") Long id) {
+        Optional<Taco> optTaco = tacoRepository.findById(id);
+        if (optTaco.isPresent())
+            return new ResponseEntity<>(optTaco.get(), HttpStatus.OK);
+
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping
-    public String showDesignForm(Model model, @AuthenticationPrincipal User user) {
-        List<Ingredient> ingredients = new ArrayList<>();
-
-        ingredientRepository.findAll()
-                .forEach(i -> ingredients.add(i));
-
-        Ingredient.Type[] types = Ingredient.Type.values();
-
-        for (Ingredient.Type type : types) {
-            log.info("model name : {}", type.toString().toLowerCase());
-            log.info("model body : {}", filterByType(ingredients, type));
-            model.addAttribute(type.toString().toLowerCase(), filterByType(ingredients, type));
-        }
-
-        model.addAttribute("user", user);
-
-        return "design";
+    @PostMapping(consumes = "application/json")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Taco postTaco(@RequestBody Taco taco) {
+        return tacoRepository.save(taco);
     }
 
-    @PostMapping
-    public String processDesign(@Valid Taco design, Errors errors,
-                                @ModelAttribute Order order) {
-        if (errors.hasErrors())
-            return "design";
 
-        Taco saved = tacoRepository.save(design);
-        order.addDesign(saved);
-
-        return "redirect:/orders/current";
-    }
-
-    private List<Ingredient> filterByType(List<Ingredient> ingredients, Ingredient.Type type) {
-        return ingredients.stream()
-                .filter(x -> x.getType().equals(type))
-                .collect(Collectors.toList());
-    }
 }
